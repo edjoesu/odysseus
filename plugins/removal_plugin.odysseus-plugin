@@ -1,0 +1,9 @@
+[Core]
+Name = move image to trash
+Module = removal_plugin
+
+[Documentation]
+Author = Ralf
+Version = 0.1
+Website = None
+Description = Kludge plugin for moving bad shots to a trash directory
