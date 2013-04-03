@@ -592,9 +592,9 @@ class SingleImageCanvas(MyMplCanvas):
 
             if self.markerlines:
                 marker_hline, marker_vline = self.markerlines
-                hpoints = marker_hline.get_ydata().size
+                hpoints = len(marker_hline.get_ydata())
                 marker_hline.set_ydata(np.ones(hpoints)*yy)
-                vpoints = marker_hline.get_xdata().size
+                vpoints = len(marker_hline.get_xdata())
                 marker_vline.set_xdata(np.ones(vpoints)*xx)
             else:
                 self.ax.hold(True)
