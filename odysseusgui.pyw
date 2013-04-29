@@ -1,3 +1,12 @@
+'''absBottomLayout=QHBoxLayout()
+        absLayout.addLayout(absBottomLayout)
+        self.NextPage=QPushButton('Next Page')
+        self.PreviousPage=QPushButton('Previous Page')
+        self.Import=QPushButton('Import')
+        absBottomLayout.addWidget(self.NextPage)
+        absBottomLayout.addWidget(self.PreviousPage)
+        absBottomLayout.addWidget(self.Import)
+        absBottomLayout.addStretch()'''
 #!/usr/bin/env python
 # This program or module is free software: you can redistribute it and/or
 # modify it under the terms of the GNU General Public License as published
@@ -270,6 +279,16 @@ class CentralWidget(QWidget):
         absLayout.addWidget(self.absImage)
         absLayout.addWidget(toolbar)
 
+        absBottomLayout=QHBoxLayout()
+        absLayout.addLayout(absBottomLayout)
+        self.NextPage=QPushButton('Next Page')
+        self.PreviousPage=QPushButton('Previous Page')
+        self.Import=QPushButton('Import')
+        absBottomLayout.addWidget(self.NextPage)
+        absBottomLayout.addWidget(self.PreviousPage)
+        absBottomLayout.addWidget(self.Import)
+        absBottomLayout.addStretch()
+
         imageLayout = QHBoxLayout()
         imageLayout.addLayout(absLayout)
         imageLayout.addStretch()
@@ -311,11 +330,15 @@ class CentralWidget(QWidget):
 
         self._make_connections()
         self.setMouseTracking(True)
-
-
+        self.imagedispl=[]
+        self.addpng=[]
+        self.addncount=[]
+        self.k=1
+        
+        
     def _make_connections(self):
         """Make signal-slot connections. Called by __init__()"""
-
+        
         self.connect(self.absMarker, SIGNAL("ClearMarker"),
                      self.absImage.clearMarker)
         self.connect(self.absImage, SIGNAL("MarkerPixval"),
@@ -323,6 +346,13 @@ class CentralWidget(QWidget):
         self.connect(self.cycleButton, SIGNAL("clicked()"), self.cycleImages)
         self.connect(self.fitForceButton, SIGNAL("clicked()"), self.fitImage)
         self.connect(self.absImage, SIGNAL("SizeChange"), self.update)
+
+        self.connect(self.Import, SIGNAL("clicked()"), self.importing)
+        self.connect(self.PreviousPage, SIGNAL("clicked()"), self.previouspage)
+        self.connect(self.NextPage, SIGNAL("clicked()"), self.nextpage)
+        
+        
+        
         for png in self.gridImages:
             self.connect(png, SIGNAL("updateAbsImage"), self.updateAbsImage)
 
@@ -331,10 +361,77 @@ class CentralWidget(QWidget):
         """Restores the normal cursor"""
         QApplication.restoreOverrideCursor()
 
+    def importing(self) :
+        self.k=self.page
+        if not self.imagedispl:
+            pass
+        else: 
+            self.load_imgs(self.imagedispl)
+            for i in self.addpng:
+                self.pnglist.remove(i)
+            for i in self.imagedispl:
+                self.datafilelist.remove(i)
+            for i in self.addncount:
+                self.ncount.remove(i)
+            self.imagedispl=[]
+            self.addpng=[]
+            self.addncount=[]
+            self.page=self.k
+        msg=str(self.page)+'/'+str(self.totalpages(len(self.pnglist)))+' '+'('+str(self.k)+')'
+        self.emit(SIGNAL("updateStatusBar"), msg)
+        
+        
+        
+        
+        
+        
+    def totalpages(self,x):
+        if x % 8==0 :
+            return x/8
+        else:
+            return x/8+1
+        
+        
+    def previouspage(self) :
+        if self.page>1 :
+            self.imagedispl=[]
+            self.addpng=[]
+            self.addncount=[]
+            try:
+                for i in range(8*(self.page-2),8*(self.page-1)):
+                    self.gridImages[i-8*(self.page-2)].update(self.pnglist[i], self.datafilelist[i],self.ncount[i])
+                    self.imagedispl.append(self.datafilelist[i])
+                    self.addpng.append(self.pnglist[i])
+                    self.addncount.append(self.ncount[i])
+            except IndexError:
+                pass
+            self.page-=1
+        msg=str(self.page)+'/'+str(self.totalpages(len(self.pnglist)))+' '+'('+str(self.k)+')'
+        self.emit(SIGNAL("updateStatusBar"), msg)
+        
 
+    def nextpage(self) :
+        if len(self.pnglist)>=8*(self.page)+1 :
+            self.imagedispl=[]
+            self.addpng=[]
+            self.addncount=[]
+            if self.page>0:
+                try:
+                    for i in range(8*self.page,8*(self.page+1)):
+                        self.gridImages[i-8*self.page].update(self.pnglist[i], self.datafilelist[i],self.ncount[i])
+                        self.imagedispl.append(self.datafilelist[i])
+                        self.addpng.append(self.pnglist[i])
+                        self.addncount.append(self.ncount[i])
+                except IndexError:
+                    pass
+            self.page+=1
+        msg=str(self.page)+'/'+str(self.totalpages(len(self.pnglist)))+' '+'('+str(self.k)+')'
+        self.emit(SIGNAL("updateStatusBar"), msg)
+        
+    
     def load_imgs(self, path_or_list):
         """Loads as many images from path as fit in GUI."""
-
+        
         if isinstance(path_or_list, list):
             imgs_sorted = filetools.sort_files_by_date(path_or_list,
                                                        newestfirst=True)
@@ -357,10 +454,12 @@ class CentralWidget(QWidget):
             msg =  "No suitable images found"
             self.emit(SIGNAL("updateStatusBar"), msg)
 
+    
+
 
     def load_newimg(self, fpathname):
         """Loads new image from path"""
-
+    
         fpathname = str(fpathname)  # convert QString to Python str if needed
         file_ext = os.path.splitext(fpathname)[1]
         if file_ext == '.TIF':
@@ -380,11 +479,11 @@ class CentralWidget(QWidget):
             if len(self.img_list) == self.gridnum:
                 # remove last image from list if the list is full
                 self.img_list.pop()
-            if len(self.pnglist) == self.pngnum:
+            '''if len(self.pnglist) == self.pngnum:
                 # remove last png thumbnail from list if it is full
                 self.ncount.pop()
                 self.pnglist.pop()
-                self.datafilelist.pop()
+                self.datafilelist.pop()'''
 
             img = np.zeros((rawdata.shape[0], rawdata.shape[1],
                             rawdata.shape[2]+1), dtype=np.float32)
@@ -392,20 +491,13 @@ class CentralWidget(QWidget):
             img[:, :, 1:] = rawdata
             self.img_list.insert(0, img)
             roi = self.absImage.getImgROI('ncount')[1]
-            noatomroi = self.absImage.getImgROI('noatom')[1]
-            sigma = 3*671e-9**2/(2*np.pi)
             if roi is not None:
                 odimg = odimg[roi[2]:roi[3], roi[0]:roi[1]]
-                if noatomroi is not None:                
-                    bgcorrection = self.pixcal**2/sigma*(roi[3]-roi[2])*(roi[1]-roi[0])*np.log(np.mean(transimg[noatomroi[2]:noatomroi[3], noatomroi[0]:noatomroi[1]],None))
-                else:
-                    bgcorrection = 0
-            else:
-                bgcorrection = 0
-            self.ncount.insert(0, self.calc_ncount(odimg)+bgcorrection)
+            self.ncount.insert(0, self.calc_ncount(odimg))
             self.pnglist.insert(0, pngname)
             self.datafilelist.insert(0, fpathname)
             self.numload = min(self.gridnum, len(self.img_list))
+            self.page=1
         else:
             msg = "Warning: TIF image does not contain 3 frames"
             self.emit(SIGNAL("updateStatusBar"), msg)
@@ -413,9 +505,11 @@ class CentralWidget(QWidget):
 
     def calc_ncount(self, odimg):
         """Calculates the number of atoms in the image"""
+
         sigma = 3*671e-9**2/(2*np.pi)
         return odimg.sum() * self.pixcal**2/sigma
 
+    
 
     def display_imgs(self):
         """Updates the GUI with new images."""
@@ -428,17 +522,22 @@ class CentralWidget(QWidget):
                 self.fitImage()
         try:
             # insert new PngWidget's to fill the grid
-            while len(self.gridImages) < len(self.pnglist):
+            # len(self.gridImages)=8 (usually) len(self.pnglist)== number of uploaded images
+            """while len(self.gridImages) < len(self.pnglist):
                 idx = len(self.gridImages)
                 self.gridImages.append(PngWidget(":/blankimg.png", None, 0,
                                                  gridindex=idx))
-                self.bottomLayout.addWidget(self.gridImages[idx])
-            for i in range(self.pngnum):
+                self.bottomLayout.addWidget(self.gridImages[idx])"""
+            for i in range(8):
+                self.k=1
                 self.gridImages[i].update(self.pnglist[i], self.datafilelist[i],
                                           self.ncount[i])
+            
         except IndexError:
             # when there are no more images left to display, stop
             pass
+        msg=str(self.page)+'/'+str(self.totalpages(len(self.pnglist)))+' '+'('+str(self.k)+')'
+        self.emit(SIGNAL("updateStatusBar"), msg)
 
 
     def updatePixval(self, text):
